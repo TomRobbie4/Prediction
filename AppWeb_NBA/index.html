@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Playoffs 2026 - Prédictions</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content glass-panel">
+            <h2>🏀 Qui es-tu ?</h2>
+            <p>Sélectionne ton nom pour éditer tes prédictions.</p>
+            <div class="player-select-grid">
+                <button class="player-btn" data-p="WILL">WILL</button>
+                <button class="player-btn" data-p="OLI">OLI</button>
+                <button class="player-btn" data-p="MIK">MIK</button>
+                <button class="player-btn" data-p="THOM">THOM</button>
+                <button class="player-btn" data-p="SAM">SAM</button>
+                <button class="player-btn" data-p="DOUSKI">DOUSKI</button>
+            </div>
+            
+            <button class="player-btn" data-p="MANAGER" style="margin-top: 1rem; width: 100%; background: rgba(255, 69, 0, 0.2); border-color: rgba(255, 69, 0, 0.5);">👔 Connexion Manager</button>
+
+            <div id="pin-section" style="display: none; margin-top: 1.5rem;">
+                <input type="password" id="pin-input" placeholder="Code NIP" maxlength="4" class="pred-input" style="width: 100px; font-size: 1.5rem; text-align: center; letter-spacing: 5px;">
+                <button id="login-submit" class="submit-btn" style="margin-top: 1rem;">Se connecter</button>
+                <p id="login-error" style="color: #FF4500; font-size: 0.9rem; margin-top: 0.5rem; display: none;">NIP Incorrect</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app" style="filter: blur(10px); pointer-events: none;">
+        
+        <header class="glass-panel main-header">
+            <div class="header-content">
+                <h1>🏆 Playoff Predictor <span>2026</span></h1>
+                <div class="live-status">
+                    <span class="pulse"></span> 
+                    <span id="sync-status">Synchronisation en direct...</span>
+                </div>
+            </div>
+            
+            <div class="scoreboard">
+                <div class="score-card player-will" data-player="WILL">
+                    <div class="avatar" style="background-image: url('photos/will.jpg');"><span class="avatar-letter">W</span></div>
+                    <h3>WILL</h3>
+                    <div class="points"><span id="score-WILL">0</span> pts</div>
+                </div>
+                <div class="score-card player-oli" data-player="OLI">
+                    <div class="avatar" style="background-image: url('photos/oli.jpg');"><span class="avatar-letter">O</span></div>
+                    <h3>OLI</h3>
+                    <div class="points"><span id="score-OLI">0</span> pts</div>
+                </div>
+                <div class="score-card player-mik" data-player="MIK">
+                    <div class="avatar" style="background-image: url('photos/mik.jpg');"><span class="avatar-letter">M</span></div>
+                    <h3>MIK</h3>
+                    <div class="points"><span id="score-MIK">0</span> pts</div>
+                </div>
+                <div class="score-card player-thom" data-player="THOM">
+                    <div class="avatar" style="background-image: url('photos/thom.jpg');"><span class="avatar-letter">T</span></div>
+                    <h3>THOM</h3>
+                    <div class="points"><span id="score-THOM">0</span> pts</div>
+                </div>
+                <div class="score-card player-sam" data-player="SAM">
+                    <div class="avatar" style="background-image: url('photos/sam.jpg');"><span class="avatar-letter">S</span></div>
+                    <h3>SAM</h3>
+                    <div class="points"><span id="score-SAM">0</span> pts</div>
+                </div>
+                <div class="score-card player-douski" data-player="DOUSKI">
+                    <div class="avatar" style="background-image: url('photos/douski.jpg');"><span class="avatar-letter">D</span></div>
+                    <h3>DOUSKI</h3>
+                    <div class="points"><span id="score-DOUSKI">0</span> pts</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="prediction-grid">
+            <!-- Rondes générées par JS -->
+            <div id="bracket-container"></div>
+        </main>
+        
+        <footer class="footer-glass">
+            <p>Application magique générée automatiquement avec les données en direct.</p>
+        </footer>
+
+    </div>
+
+    <!-- Script principal -->
+    <script src="app.js"></script>
+</body>
+</html>
