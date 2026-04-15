@@ -161,6 +161,22 @@ function setupLogin() {
                 if(isAdmin) {
                     document.getElementById("sync-status").textContent = "MODE ADMIN ACTIVÉ";
                     document.getElementById("sync-status").style.color = "#FF4500";
+                    
+                    if (!document.getElementById("admin-sync-nba-btn")) {
+                        const syncBtn = document.createElement("button");
+                        syncBtn.id = "admin-sync-nba-btn";
+                        syncBtn.innerHTML = "🔄 Auto-Sync NBA";
+                        syncBtn.style.padding = "4px 12px";
+                        syncBtn.style.borderRadius = "10px";
+                        syncBtn.style.background = "#10B981";
+                        syncBtn.style.color = "white";
+                        syncBtn.style.fontWeight = "bold";
+                        syncBtn.style.border = "none";
+                        syncBtn.style.cursor = "pointer";
+                        syncBtn.style.marginLeft = "10px";
+                        syncBtn.addEventListener("click", adminSyncNBA);
+                        document.querySelector(".live-status").appendChild(syncBtn);
+                    }
                 }
                 initApp();
             }, 500);
@@ -580,6 +596,7 @@ function buildGrid() {
             players.forEach(p => {
                 const cell = document.createElement("div");
                 cell.className = "prediction-cell";
+                cell.dataset.player = p;
                 
                 if (isMvpSeries(seriesId)) {
                     // MVP: text input
@@ -807,11 +824,102 @@ function savePrediction(matchupId, player, val) {
 
 // ============== NBA RESULTS ==============
 
+async function adminSyncNBA() {
+    try {
+        const btn = document.getElementById("admin-sync-nba-btn");
+        if (btn) btn.innerHTML = "⏳ Sync en cours...";
+        
+        const targetUrl = encodeURIComponent("https://stats.nba.com/stats/playoffbracket?LeagueID=00&SeasonYear=2025&State=2");
+        const url = "https://api.allorigins.win/get?url=" + targetUrl;
+        const response = await fetch(url);
+        const rawData = await response.json();
+        const data = JSON.parse(rawData.contents);
+        
+        let updates = {};
+        
+        if (data.bracket && data.bracket.playoffBracketSeries) {
+            data.bracket.playoffBracketSeries.forEach(apiSeries => {
+                let highTeam = apiSeries.highSeedName;
+                let lowTeam = apiSeries.lowSeedName;
+                if (!highTeam || !lowTeam) return;
+                
+                highTeam = highTeam.toLowerCase();
+                lowTeam = lowTeam.toLowerCase();
+                
+                const highWins = apiSeries.highSeedSeriesWins || 0;
+                const lowWins = apiSeries.lowSeedSeriesWins || 0;
+                
+                let matchedSeriesId = null;
+                for (let key of Object.keys(bracket)) {
+                    const b = bracket[key];
+                    if (!b) continue;
+                    
+                    if ((b.team1 === highTeam && b.team2 === lowTeam) ||
+                        (b.team1 === lowTeam && b.team2 === highTeam)) {
+                        matchedSeriesId = key;
+                        break;
+                    }
+                    if (key.startsWith("rd1")) {
+                        if (b.team1 === highTeam && !b.team2) {
+                            updates[`bracket/${key}/team2`] = lowTeam;
+                            matchedSeriesId = key;
+                            break;
+                        }
+                        if (b.team2 === highTeam && !b.team1) {
+                            updates[`bracket/${key}/team1`] = lowTeam;
+                            matchedSeriesId = key;
+                            break;
+                        }
+                        if (b.team1 === lowTeam && !b.team2) {
+                            updates[`bracket/${key}/team2`] = highTeam;
+                            matchedSeriesId = key;
+                            break;
+                        }
+                        if (b.team2 === lowTeam && !b.team1) {
+                            updates[`bracket/${key}/team1`] = highTeam;
+                            matchedSeriesId = key;
+                            break;
+                        }
+                    }
+                }
+                
+                if (matchedSeriesId) {
+                    if (highWins === 4) {
+                        updates[`bracket/${matchedSeriesId}/winner`] = highTeam;
+                        updates[`bracket/${matchedSeriesId}/games`] = 4 + lowWins;
+                    } else if (lowWins === 4) {
+                        updates[`bracket/${matchedSeriesId}/winner`] = lowTeam;
+                        updates[`bracket/${matchedSeriesId}/games`] = 4 + highWins;
+                    }
+                }
+            });
+            
+            if (Object.keys(updates).length > 0) {
+                await db.ref().update(updates);
+                alert("✅ Sync succès! " + Object.keys(updates).length + " éléments (play-ins, gagnants) mis à jour.");
+            } else {
+                alert("Aucun nouveau résultat à synchroniser depuis la NBA.");
+            }
+        } else {
+            alert("L'API de la NBA n'a pas répondu avec le format attendu.");
+        }
+        
+        if (btn) btn.innerHTML = "🔄 Auto-Sync NBA";
+    } catch(err) {
+        console.error(err);
+        alert("Erreur de sync: " + err.message);
+        const btn = document.getElementById("admin-sync-nba-btn");
+        if (btn) btn.innerHTML = "🔄 Auto-Sync NBA";
+    }
+}
+
 async function fetchNBAResults() {
     try {
-        const url = "https://corsproxy.io/?https://stats.nba.com/stats/playoffbracket?LeagueID=00&SeasonYear=2025&State=2";
+        const targetUrl = encodeURIComponent("https://stats.nba.com/stats/playoffbracket?LeagueID=00&SeasonYear=2025&State=2");
+        const url = "https://api.allorigins.win/get?url=" + targetUrl;
         const response = await fetch(url);
-        const data = await response.json();
+        const rawData = await response.json();
+        const data = JSON.parse(rawData.contents);
         if (data.resultSets && data.resultSets[0].rowSet) {
             const rows = data.resultSets[0].rowSet;
             const headers = data.resultSets[0].headers;
