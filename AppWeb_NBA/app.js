@@ -373,8 +373,13 @@ function saveRoundLock(roundKey, locked) {
     return db.ref('roundLocks/' + roundKey).set(locked);
 }
 
-function saveSeriesWinner(seriesId, winner) {
-    return db.ref('bracket/' + seriesId + '/winner').set(winner);
+function saveSeriesWinner(seriesId, winner, games = null) {
+    if (winner === null) {
+        return db.ref('bracket/' + seriesId).update({ winner: null, games: null });
+    }
+    const updates = { winner: winner };
+    if (games !== null) updates.games = games;
+    return db.ref('bracket/' + seriesId).update(updates);
 }
 
 function saveSeriesTeam(seriesId, slot, teamValue) {
@@ -531,11 +536,32 @@ function buildGrid() {
                         wSel.appendChild(opt);
                     });
                     
-                    wSel.addEventListener("change", () => {
-                        saveSeriesWinner(seriesId, wSel.value || null);
+                    const currentGames = bracket[seriesId]?.games || null;
+                    const gSel = document.createElement("select");
+                    gSel.className = "admin-mini-select games-select";
+                    
+                    const gDef = document.createElement("option");
+                    gDef.value = ""; gDef.textContent = "#";
+                    gSel.appendChild(gDef);
+                    
+                    [4, 5, 6, 7].forEach(g => {
+                        const opt = document.createElement("option");
+                        opt.value = g; opt.textContent = g;
+                        if (currentGames === g) opt.selected = true;
+                        gSel.appendChild(opt);
                     });
                     
+                    const updateWinnerAndGames = () => {
+                        const winner = wSel.value || null;
+                        const games = gSel.value ? parseInt(gSel.value) : null;
+                        saveSeriesWinner(seriesId, winner, games);
+                    };
+
+                    wSel.addEventListener("change", updateWinnerAndGames);
+                    gSel.addEventListener("change", updateWinnerAndGames);
+                    
                     winDiv.appendChild(wSel);
+                    winDiv.appendChild(gSel);
                     matchCell.appendChild(winDiv);
                 }
             }
@@ -821,7 +847,17 @@ function calculatePoints() {
         let pts = 0;
         
         if (team && !sel.classList.contains("secret-pick")) {
-            if (realResults[team]) {
+            const series = bracket[matchupId];
+            if (series && series.winner) {
+                if (series.winner === team) {
+                    pts = 1;
+                    if (series.games && games === series.games) {
+                        pts = 2;
+                    } else if (!series.games && realResults[team] && games === realResults[team]) {
+                        pts = 2;
+                    }
+                }
+            } else if (realResults[team]) {
                 pts = 1;
                 if (games === realResults[team]) pts = 2;
             }
