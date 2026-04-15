@@ -752,3 +752,176 @@ h1 span {
     font-size: 0.9rem;
 }
 
+/* ========================
+   LIVE SCORES SECTION
+   ======================== */
+
+.live-scores-section {
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.live-scores-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10B981, #3B82F6, #8B5CF6);
+}
+
+.live-scores-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+}
+
+.live-scores-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff, #a1a1aa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.live-scores-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #10B981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.live-scores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.live-scores-loading,
+.live-scores-empty {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1rem;
+    grid-column: 1 / -1;
+}
+
+/* Game Card */
+.live-game-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.live-game-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.live-game-card.live {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.08);
+}
+
+.live-game-card.final {
+    border-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.85;
+}
+
+/* Status Bar */
+.game-status-bar {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 5px;
+}
+
+.game-status-bar.upcoming {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60A5FA;
+}
+
+.game-status-bar.live {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34D399;
+    animation: liveGlow 2s ease-in-out infinite;
+}
+
+@keyframes liveGlow {
+    0%, 100% { background: rgba(16, 185, 129, 0.15); }
+    50% { background: rgba(16, 185, 129, 0.3); }
+}
+
+.game-status-bar.final {
+    background: rgba(255, 255, 255, 0.05);
+    color: #71717a;
+}
+
+/* Teams Row */
+.game-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+}
+
+.game-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+}
+
+.game-team-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a1a1aa;
+}
+
+.game-team-score {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.game-team.winning .game-team-name {
+    color: #34D399;
+}
+
+.game-team.winning .game-team-score {
+    color: #34D399;
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.game-vs {
+    font-size: 0.75rem;
+    color: #52525b;
+    font-weight: 500;
+    padding: 0 6px;
+}
+
+@media (max-width: 600px) {
+    .live-scores-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+    .live-scores-section {
+        padding: 1rem;
+    }
+}
+

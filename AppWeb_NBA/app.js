@@ -180,6 +180,93 @@ function setupLogin() {
 function initApp() {
     setupFirebaseListener();
     fetchNBAResults();
+    fetchLiveScores();
+    // Refresh live scores every 30 seconds
+    setInterval(fetchLiveScores, 30000);
+}
+
+// ============== LIVE SCORES ==============
+
+async function fetchLiveScores() {
+    const grid = document.getElementById('live-scores-grid');
+    const statusEl = document.getElementById('live-scores-status');
+    
+    try {
+        // ESPN API — pas de problème CORS!
+        const url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
+        const response = await fetch(url);
+        const data = await response.json();
+        const events = data?.events || [];
+        
+        if (events.length === 0) {
+            grid.innerHTML = '<p class="live-scores-empty">Aucun match aujourd\'hui 🏖️</p>';
+            statusEl.innerHTML = '😴 Pas de match';
+            return;
+        }
+        
+        const hasLive = events.some(e => e.status?.type?.state === 'in');
+        statusEl.innerHTML = hasLive 
+            ? '<span class="pulse"></span> LIVE' 
+            : '📅 Aujourd\'hui';
+        
+        grid.innerHTML = events.map(event => {
+            const comp = event.competitions?.[0];
+            if (!comp) return '';
+            
+            const statusObj = event.status?.type;
+            const state = statusObj?.state || 'pre'; // pre, in, post
+            const detail = statusObj?.shortDetail || statusObj?.detail || '';
+            
+            let statusClass = '';
+            let statusLabel = '';
+            if (state === 'pre') {
+                statusClass = 'upcoming';
+                statusLabel = detail;
+            } else if (state === 'in') {
+                statusClass = 'live';
+                statusLabel = detail;
+            } else {
+                statusClass = 'final';
+                statusLabel = detail || 'FINAL';
+            }
+            
+            // ESPN: competitors[0] = home, competitors[1] = away (or vice versa)
+            const teams = comp.competitors || [];
+            const home = teams.find(t => t.homeAway === 'home') || teams[0];
+            const away = teams.find(t => t.homeAway === 'away') || teams[1];
+            
+            const homeScore = parseInt(home?.score) || 0;
+            const awayScore = parseInt(away?.score) || 0;
+            const homeAbbr = home?.team?.abbreviation || '???';
+            const awayAbbr = away?.team?.abbreviation || '???';
+            
+            const awayWinning = awayScore > homeScore;
+            const homeWinning = homeScore > awayScore;
+            const gameStarted = state !== 'pre';
+            
+            return `
+                <div class="live-game-card ${statusClass}">
+                    <div class="game-status-bar ${statusClass}">${statusLabel}</div>
+                    <div class="game-teams">
+                        <div class="game-team ${awayWinning && gameStarted ? 'winning' : ''}">
+                            <span class="game-team-name">${awayAbbr}</span>
+                            <span class="game-team-score">${gameStarted ? awayScore : '-'}</span>
+                        </div>
+                        <div class="game-vs">@</div>
+                        <div class="game-team ${homeWinning && gameStarted ? 'winning' : ''}">
+                            <span class="game-team-name">${homeAbbr}</span>
+                            <span class="game-team-score">${gameStarted ? homeScore : '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch(err) {
+        console.warn("Live scores fetch error:", err);
+        grid.innerHTML = '<p class="live-scores-empty">Impossible de charger les scores 😕</p>';
+        statusEl.innerHTML = '❌ Hors-ligne';
+    }
 }
 
 // ============== BRACKET LOGIC ==============

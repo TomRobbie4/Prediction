@@ -79,13 +79,76 @@
             </div>
         </header>
 
+        <!-- Live NBA Scores -->
+        <section class="live-scores-section glass-panel" id="live-scores-section">
+            <div class="live-scores-header">
+                <h2>📺 Scores en direct</h2>
+                <span class="live-scores-status" id="live-scores-status">
+                    <span class="pulse"></span> LIVE
+                </span>
+            </div>
+            <div class="live-scores-grid" id="live-scores-grid">
+                <p class="live-scores-loading">Chargement des scores...</p>
+            </div>
+        </section>
+
         <main class="prediction-grid">
             <!-- Rondes générées par JS -->
             <div id="bracket-container"></div>
         </main>
         
+        <!-- Règles du pool -->
+        <section class="rules-section glass-panel">
+            <h2>📜 Règles du Pool</h2>
+            
+            <div class="rules-grid">
+                <div class="rule-card">
+                    <div class="rule-icon">🏀</div>
+                    <h3>Format</h3>
+                    <p>Prédis le gagnant de chaque série des playoffs NBA 2026 et le nombre de matchs joués.</p>
+                </div>
+                
+                <div class="rule-card">
+                    <div class="rule-icon">⭐</div>
+                    <h3>Points – Série</h3>
+                    <ul>
+                        <li><strong>1 pt</strong> — Bonne équipe gagnante</li>
+                        <li><strong>2 pts</strong> — Bonne équipe + bon nombre de matchs</li>
+                        <li><strong>0 pt</strong> — Mauvaise prédiction</li>
+                    </ul>
+                </div>
+
+                <div class="rule-card">
+                    <div class="rule-icon">🏆</div>
+                    <h3>Points – MVP</h3>
+                    <ul>
+                        <li><strong>1 pt</strong> — Bon MVP de conférence</li>
+                        <li><strong>1 pt</strong> — Bon MVP des finales</li>
+                    </ul>
+                </div>
+
+                <div class="rule-card">
+                    <div class="rule-icon">🔒</div>
+                    <h3>Deadline</h3>
+                    <p>Les picks sont <strong>lockés par ronde</strong>. Une fois qu'une ronde est lockée, les picks de tout le monde sont révélés et ne peuvent plus être modifiés.</p>
+                </div>
+
+                <div class="rule-card">
+                    <div class="rule-icon">🕵️</div>
+                    <h3>Confidentialité</h3>
+                    <p>Avant le lock d'une ronde, les picks des autres joueurs sont <strong>masqués (🔒 Secret)</strong>. Impossible de copier!</p>
+                </div>
+
+                <div class="rule-card">
+                    <div class="rule-icon">🥇</div>
+                    <h3>Gagnant</h3>
+                    <p>Le joueur avec le <strong>plus de points</strong> à la fin des finales NBA remporte le pool!</p>
+                </div>
+            </div>
+        </section>
+        
         <footer class="footer-glass">
-            <p>Application magique générée automatiquement avec les données en direct.</p>
+            <p>NBA Playoff Pool 2026 — Bonne chance à tous! 🍀</p>
         </footer>
 
     </div>
