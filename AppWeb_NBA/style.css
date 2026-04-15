@@ -11,7 +11,7 @@
     --will-color: #3B82F6;    /* Neon Blue */
     --oli-color: #10B981;     /* Neon Green */
     --mik-color: #F59E0B;     /* Neon Gold */
-    --thom-color: #EC4899;    /* Neon Pink */
+    --tom-color: #EC4899;    /* Neon Pink */
     --sam-color: #06B6D4;     /* Neon Cyan */
     --douski-color: #8B5CF6;  /* Neon Purple */
 }
@@ -159,7 +159,7 @@ h1 span {
 .player-will::after { background: var(--will-color); box-shadow: 0 0 20px var(--will-color); }
 .player-oli::after { background: var(--oli-color); box-shadow: 0 0 20px var(--oli-color); }
 .player-mik::after { background: var(--mik-color); box-shadow: 0 0 20px var(--mik-color); }
-.player-thom::after { background: var(--thom-color); box-shadow: 0 0 20px var(--thom-color); }
+.player-tom::after { background: var(--tom-color); box-shadow: 0 0 20px var(--tom-color); }
 .player-sam::after { background: var(--sam-color); box-shadow: 0 0 20px var(--sam-color); }
 .player-douski::after { background: var(--douski-color); box-shadow: 0 0 20px var(--douski-color); }
 
@@ -189,7 +189,7 @@ h1 span {
 .player-will .avatar { color: var(--will-color); }
 .player-oli .avatar { color: var(--oli-color); }
 .player-mik .avatar { color: var(--mik-color); }
-.player-thom .avatar { color: var(--thom-color); }
+.player-tom .avatar { color: var(--tom-color); }
 .player-sam .avatar { color: var(--sam-color); }
 .player-douski .avatar { color: var(--douski-color); }
 
@@ -441,3 +441,314 @@ h1 span {
     background: #059669;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
 }
+
+/* ========================
+   COLUMN HEADERS (player names)
+   ======================== */
+
+.header-row {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.header-label {
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border-left: 4px solid transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
+}
+
+.header-cell {
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 0.8rem 0.5rem;
+    border-radius: 10px;
+}
+
+.player-col-will { color: var(--will-color); border-bottom: 2px solid var(--will-color); }
+.player-col-oli { color: var(--oli-color); border-bottom: 2px solid var(--oli-color); }
+.player-col-mik { color: var(--mik-color); border-bottom: 2px solid var(--mik-color); }
+.player-col-tom { color: var(--tom-color); border-bottom: 2px solid var(--tom-color); }
+.player-col-sam { color: var(--sam-color); border-bottom: 2px solid var(--sam-color); }
+.player-col-douski { color: var(--douski-color); border-bottom: 2px solid var(--douski-color); }
+
+/* ========================
+   ROUND TITLE ROW
+   ======================== */
+
+.round-title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.round-title-row .round-title {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+/* ========================
+   ROUND LOCK BADGE
+   ======================== */
+
+.round-lock-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.round-lock-badge.open {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.round-lock-badge.locked {
+    background: rgba(255, 69, 0, 0.15);
+    color: #FF6B35;
+    border: 1px solid rgba(255, 69, 0, 0.3);
+}
+
+/* ========================
+   ADMIN LOCK BUTTONS
+   ======================== */
+
+.admin-lock-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+    font-family: 'Outfit', sans-serif;
+}
+
+.admin-lock-btn.lockable {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.admin-lock-btn.lockable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.admin-lock-btn.unlockable {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.admin-lock-btn.unlockable:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: translateY(-2px);
+}
+
+/* ========================
+   ROUND LOCK VISUAL STATE
+   ======================== */
+
+.round-locked .series-row:not(.header-row) {
+    opacity: 0.85;
+}
+
+.round-locked .pred-input {
+    border-color: rgba(255, 69, 0, 0.15) !important;
+}
+
+.input-locked {
+    cursor: not-allowed !important;
+}
+
+/* ========================
+   DROPDOWN PICKERS
+   ======================== */
+
+.pick-dropdowns {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+
+.pick-team,
+.pick-games {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0.7rem 0.4rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: center;
+}
+
+.pick-team {
+    flex: 1;
+    min-width: 0;
+}
+
+.pick-games {
+    width: 48px;
+    flex-shrink: 0;
+}
+
+.pick-team:focus,
+.pick-games:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.pick-team:hover:not(:disabled),
+.pick-games:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.pick-team:disabled,
+.pick-games:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pick-team option,
+.pick-games option {
+    background: #1a1a2e;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Secret pick indicator */
+.secret-pick {
+    background: rgba(255, 69, 0, 0.08) !important;
+    border-color: rgba(255, 69, 0, 0.2) !important;
+    color: rgba(255, 69, 0, 0.5) !important;
+}
+
+.secret-pick option {
+    display: none;
+}
+
+.secret-pick::after {
+    content: '🔒';
+}
+
+/* MVP text input styles */
+.mvp-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white;
+    padding: 0.7rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Outfit';
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.mvp-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mvp-input::placeholder {
+    color: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================
+   ADMIN MINI SELECTS
+   ======================== */
+
+.admin-playin,
+.admin-winner {
+    margin-top: 6px;
+}
+
+.admin-mini-select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    border-radius: 6px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 4px 6px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: center;
+}
+
+.admin-mini-select:focus {
+    outline: none;
+    border-color: rgba(255, 69, 0, 0.5);
+}
+
+.admin-mini-select option {
+    background: #1a1a2e;
+    color: white;
+}
+
+.winner-select {
+    border-color: rgba(251, 191, 36, 0.3);
+    color: #fbbf24;
+}
+
+/* ========================
+   WINNER BADGE
+   ======================== */
+
+.winner-badge {
+    margin-top: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #34D399;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    text-align: center;
+}
+
+/* ========================
+   MATCHUP LABEL
+   ======================== */
+
+.matchup-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
