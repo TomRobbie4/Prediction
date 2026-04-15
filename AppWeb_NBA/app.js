@@ -272,11 +272,28 @@ async function fetchLiveScores() {
 // ============== BRACKET LOGIC ==============
 
 function computeBracket() {
-    // Propagate winners to next round teams
+    // Propagate winners to next round teams (and handle clearing)
     for (const [seriesId, feed] of Object.entries(FEEDS_TO)) {
         const series = bracket[seriesId];
-        if (series && series.winner && bracket[feed.target]) {
+        if (!series || !bracket[feed.target]) continue;
+
+        const prevValue = bracket[feed.target][feed.slot];
+
+        if (series.winner) {
+            // Winner set → propagate to next round
             bracket[feed.target][feed.slot] = series.winner;
+            if (prevValue !== series.winner) {
+                saveSeriesTeam(feed.target, feed.slot, series.winner);
+            }
+        } else if (prevValue !== null && prevValue !== undefined) {
+            // Winner cleared → also clear the propagated team in next round
+            bracket[feed.target][feed.slot] = null;
+            saveSeriesTeam(feed.target, feed.slot, null);
+            // Cascade: if the next series had a winner that was the removed team, clear it too
+            if (bracket[feed.target].winner === prevValue) {
+                bracket[feed.target].winner = null;
+                saveSeriesWinner(feed.target, null);
+            }
         }
     }
 }
@@ -458,14 +475,16 @@ function buildGrid() {
                 const [t1, t2] = getSeriesTeams(seriesId);
                 const currentWinner = bracket[seriesId]?.winner || null;
                 
-                // Play-in team setter for TBD slots (Round 1 only)
-                if (seriesId.startsWith("rd1_") && (!t1 || !t2)) {
+                // Play-in team setter (Round 1 series that have a play-in slot)
+                const defaultSeries = DEFAULT_BRACKET[seriesId];
+                const hasPlayinSlot = seriesId.startsWith("rd1_") && defaultSeries && (!defaultSeries.team1 || !defaultSeries.team2);
+                if (hasPlayinSlot) {
                     const playinDiv = document.createElement("div");
                     playinDiv.className = "admin-playin";
                     
                     const isEast = ["rd1_1","rd1_2","rd1_3","rd1_4"].includes(seriesId);
                     const playinTeams = isEast ? EAST_PLAYIN : WEST_PLAYIN;
-                    const missingSlot = !t2 ? "team2" : "team1";
+                    const missingSlot = !defaultSeries.team2 ? "team2" : "team1";
                     
                     const pSel = document.createElement("select");
                     pSel.className = "admin-mini-select";
@@ -481,7 +500,12 @@ function buildGrid() {
                     });
                     
                     pSel.addEventListener("change", () => {
-                        saveSeriesTeam(seriesId, missingSlot, pSel.value || null);
+                        const newTeam = pSel.value || null;
+                        saveSeriesTeam(seriesId, missingSlot, newTeam);
+                        // If clearing the play-in team, also clear the winner if it was that team
+                        if (!newTeam && bracket[seriesId]?.winner) {
+                            saveSeriesWinner(seriesId, null);
+                        }
                     });
                     
                     playinDiv.appendChild(pSel);

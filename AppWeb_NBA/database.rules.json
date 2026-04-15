@@ -3,6 +3,14 @@
     "predictions": {
       ".read": true,
       ".write": true
+    },
+    "bracket": {
+      ".read": true,
+      ".write": true
+    },
+    "roundLocks": {
+      ".read": true,
+      ".write": true
     }
   }
 }
