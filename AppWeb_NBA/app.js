@@ -1,7 +1,40 @@
-const players = ['WILL', 'OLI', 'MIK', 'THOM', 'SAM', 'DOUSKI'];
+// ============== FIREBASE CONFIG ==============
+const firebaseConfig = {
+  apiKey: "AIzaSyBrKW0ltAkQiKcYD3OAolCoGRjvk-JtM7c",
+  authDomain: "nba-pool-2026.firebaseapp.com",
+  databaseURL: "https://nba-pool-2026-default-rtdb.firebaseio.com",
+  projectId: "nba-pool-2026",
+  storageBucket: "nba-pool-2026.firebasestorage.app",
+  messagingSenderId: "939431198504",
+  appId: "1:939431198504:web:61e3ce741f5910ff75da1d",
+  measurementId: "G-V1M33694BT"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ============== CONFIG ==============
+
+const players = ['WILL', 'OLI', 'MIK', 'SAM', 'THOM', 'DOUSKI'];
 let currentUser = null;
-let currentPin = null;
 let isAdmin = false;
+
+// NIP codes (même que ton server.py)
+const PIN_CODES = {
+    'MANAGER': '2417',
+    'WILL': '0220',
+    'OLI': '1005',
+    'MIK': '0508',
+    'THOM': '0716',
+    'SAM': '0506',
+    'DOUSKI': '0731'
+};
+
+const ADMIN_USER = 'MANAGER';
+
+// Date limite : 18 Avril 2026 à 10:00 du matin
+const REVEAL_DATE = new Date(2026, 3, 18, 10, 0, 0); // mois 3 = avril (0-indexed)
 
 // Structure des playoffs
 const bracketData = [
@@ -19,9 +52,13 @@ let realMvps = { "ff_2": "tatum", "ff_4": "jokic", "fin_2": "tatum" };
 let serverPredictions = {};
 let isRevealed = false;
 
+// ============== INIT ==============
+
 document.addEventListener("DOMContentLoaded", () => {
     setupLogin();
 });
+
+// ============== LOGIN ==============
 
 function setupLogin() {
     let selectedPlayer = null;
@@ -37,50 +74,119 @@ function setupLogin() {
         });
     });
 
-    document.getElementById('login-submit').addEventListener('click', async () => {
+    document.getElementById('login-submit').addEventListener('click', () => {
         const pin = document.getElementById('pin-input').value;
         if (!selectedPlayer || !pin) return;
         
-        try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ player: selectedPlayer, pin: pin })
-            });
-            const data = await res.json();
-            if (data.success) {
-                currentUser = selectedPlayer;
-                currentPin = pin;
-                isAdmin = data.isAdmin;
-                document.getElementById('login-modal').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('login-modal').style.display = 'none';
-                    const mainApp = document.getElementById('main-app');
-                    mainApp.style.filter = 'none';
-                    mainApp.style.pointerEvents = 'all';
-                    
-                    if(isAdmin) {
-                        document.getElementById("sync-status").textContent = "MODE ADMIN ACTIVÉ";
-                        document.getElementById("sync-status").style.color = "#FF4500";
-                    }
-                    
-                    initApp();
-                }, 500);
-            } else {
-                document.getElementById('login-error').style.display = 'block';
-            }
-        } catch(err) {
-            console.error("Erreur serveur", err);
-            alert("Erreur de connexion au serveur !");
+        // Vérification locale du NIP (plus besoin du serveur!)
+        if (PIN_CODES[selectedPlayer] === pin) {
+            currentUser = selectedPlayer;
+            isAdmin = (selectedPlayer === ADMIN_USER);
+            
+            document.getElementById('login-modal').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('login-modal').style.display = 'none';
+                const mainApp = document.getElementById('main-app');
+                mainApp.style.filter = 'none';
+                mainApp.style.pointerEvents = 'all';
+                
+                if(isAdmin) {
+                    document.getElementById("sync-status").textContent = "MODE ADMIN ACTIVÉ";
+                    document.getElementById("sync-status").style.color = "#FF4500";
+                }
+                
+                initApp();
+            }, 500);
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('login-error').style.display = 'none';
+            }, 2000);
         }
+    });
+
+    // Enter key support
+    document.getElementById('pin-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('login-submit').click();
     });
 }
 
+// ============== APP INIT ==============
+
 function initApp() {
     buildGrid();
-    loadServerPredictions();
+    setupFirebaseListener();
     fetchNBAResults();
 }
+
+// ============== FIREBASE SYNC ==============
+
+function setupFirebaseListener() {
+    // Écouter les changements en temps réel
+    db.ref('predictions').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        serverPredictions = {};
+        
+        // Convertir Firebase data en format plat
+        for (const key in data) {
+            serverPredictions[key] = data[key];
+        }
+        
+        // Vérifier si la date limite est passée
+        isRevealed = new Date() >= REVEAL_DATE;
+        
+        if (isRevealed && !isAdmin) {
+            document.getElementById("sync-status").textContent = "TEMPS ÉCOULÉ ⏳ / RÉSULTATS DÉVOILÉS!";
+            document.getElementById("sync-status").style.color = "#FF4500";
+        }
+        
+        populateInputs();
+        applyLockingLogic();
+        calculatePoints();
+    });
+}
+
+function populateInputs() {
+    // Remplir les inputs avec les données Firebase
+    const inputs = document.querySelectorAll(".pred-input");
+    inputs.forEach(inp => {
+        if (!inp.dataset.matchupId) return; // Skip pin input
+        const player = inp.dataset.player;
+        const key = `nba2026_${inp.dataset.matchupId}_${player}`;
+        const value = serverPredictions[key];
+        
+        if (value !== undefined && value !== null) {
+            // Privacy: masquer les picks des autres avant la deadline
+            if (!isRevealed && player !== currentUser && !isAdmin) {
+                if (value.trim() !== "") {
+                    inp.value = "🔒 Secret";
+                } else {
+                    inp.value = "";
+                }
+            } else {
+                inp.value = value;
+            }
+        } else {
+            inp.value = "";
+        }
+    });
+    
+    // Matchup names
+    document.querySelectorAll(".matchup-name").forEach((el) => {
+        const nextInput = el.nextElementSibling?.querySelector('input');
+        if (!nextInput) return;
+        const mId = nextInput.dataset.matchupId;
+        const saved = serverPredictions[`nba2026_matchupName_${mId}`];
+        if (saved) el.textContent = saved;
+    });
+}
+
+function savePredictionToFirebase(key, value) {
+    // Écrire directement dans Firebase
+    return db.ref('predictions/' + key).set(value);
+}
+
+// ============== BUILD GRID ==============
 
 function buildGrid() {
     const container = document.getElementById("bracket-container");
@@ -99,7 +205,7 @@ function buildGrid() {
             
             const matchName = document.createElement("div");
             matchName.className = "matchup-name";
-            matchName.contentEditable = isAdmin ? "true" : "false"; // Seulement Admin peut changer? Ou tout le monde avant deadline? Laisons-le editable pour tout le monde avant deadline c'est bloqué par app.js plus tard.
+            matchName.contentEditable = isAdmin ? "true" : "false";
             
             row.appendChild(matchName);
             
@@ -109,13 +215,13 @@ function buildGrid() {
                 cell.className = "prediction-cell";
                 const input = document.createElement("input");
                 input.className = "pred-input";
-                input.placeholder = (p === currentUser || isAdmin) ? "ex: Pistons 6" : "Attendez...";
+                input.placeholder = (p === currentUser || isAdmin) ? "ex: Pistons 6" : "🔒";
                 input.type = "text";
                 input.dataset.matchupId = matchup.id;
                 input.dataset.player = p;
                 
                 input.addEventListener("change", (e) => {
-                    savePrediction(matchup.id, p, e.target.value, input);
+                    savePrediction(matchup.id, p, e.target.value);
                 });
                 
                 const badge = document.createElement("div");
@@ -130,30 +236,46 @@ function buildGrid() {
         });
         container.appendChild(section);
     });
+    
+    // Setup matchup name editing
+    setupMatchupNameEditing();
 }
 
+function setupMatchupNameEditing() {
+    document.querySelectorAll(".matchup-name").forEach((el) => {
+        el.addEventListener("input", (e) => {
+            if (!isAdmin && isRevealed) return;
+            const nextInput = el.nextElementSibling?.querySelector('input');
+            if (!nextInput) return;
+            const mId = nextInput.dataset.matchupId;
+            savePredictionToFirebase(`nba2026_matchupName_${mId}`, e.target.textContent);
+        });
+    });
+}
+
+// ============== LOCKING LOGIC ==============
+
 function applyLockingLogic() {
-    // Si la date limite est passée et qu'on n'est pas admin, on bloque.
-    // Et on bloque toujours les colonnes des AUTRES joueurs si on n'est pas admin.
     const inputs = document.querySelectorAll(".pred-input");
     inputs.forEach(inp => {
+        if (!inp.dataset.matchupId) return; // Skip pin input
         const p = inp.dataset.player;
         if (!isAdmin) {
             if (isRevealed) {
-                // Tout est bloqué (Date limite)
+                // Tout est bloqué (Date limite passée)
                 inp.readOnly = true;
                 inp.style.opacity = "0.7";
             } else if (p !== currentUser) {
-                // On est avant la deadline, mais ce n'est pas ma colonne
+                // Avant deadline, mais colonne d'un autre joueur
                 inp.readOnly = true;
                 inp.style.opacity = "0.7";
             } else {
-                // Ma colonne avant deadline
+                // Ma colonne avant deadline → éditable
                 inp.readOnly = false;
                 inp.style.opacity = "1";
             }
         } else {
-            // L'admin a les pleins pouvoirs
+            // Admin = pleins pouvoirs
             inp.readOnly = false;
             inp.style.opacity = "1";
         }
@@ -165,91 +287,40 @@ function applyLockingLogic() {
             el.contentEditable = "false";
             el.style.opacity = "0.8";
             el.style.cursor = "default";
-        } else {
+        } else if (isAdmin) {
             el.contentEditable = "true";
+        } else {
+            el.contentEditable = "false";
+            el.style.cursor = "default";
         }
     });
 }
 
-async function savePrediction(matchupId, player, val, inputElement) {
+// ============== SAVE PREDICTION ==============
+
+function savePrediction(matchupId, player, val) {
     if (player !== currentUser && !isAdmin) {
         alert("Vous ne pouvez pas modifier la colonne des autres !");
         return; 
     }
     
-    const key = `nba2026_${matchupId}_${player}`;
-    serverPredictions[key] = val; 
-    calculatePoints();
+    if (isRevealed && !isAdmin) {
+        alert("La date limite est passée, impossible de modifier !");
+        return;
+    }
     
-    try {
-        const res = await fetch('/api/prediction', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ player: currentUser, pin: currentPin, key: key, value: val })
-        });
-        
-        const data = await res.json();
-        if(!data.success) {
-            alert(data.message); // Ex: "La date limite est passée !"
-            // Revert state
-            loadServerPredictions(); 
-        }
-        
-    } catch(err) {
-        console.error("Save error", err);
-    }
+    const key = `nba2026_${matchupId}_${player}`;
+    
+    // Sauvegarder dans Firebase (le listener mettra à jour automatiquement)
+    savePredictionToFirebase(key, val).then(() => {
+        console.log(`✅ Sauvegardé: ${key}`);
+    }).catch(err => {
+        console.error("Erreur de sauvegarde:", err);
+        alert("Erreur de sauvegarde! Vérifiez votre connexion.");
+    });
 }
 
-async function loadServerPredictions() {
-    try {
-        const res = await fetch(`/api/predictions?player=${currentUser}`);
-        const data = await res.json();
-        
-        isRevealed = data.revealed;
-        if(isRevealed && !isAdmin) {
-            document.getElementById("sync-status").textContent = "TEMPS ÉCOULÉ ⏳ / RÉSULTATS DÉVOILÉS!";
-            document.getElementById("sync-status").style.color = "#FF4500";
-        }
-        
-        serverPredictions = {};
-        data.predictions.forEach(p => {
-            serverPredictions[p.key] = p.value;
-        });
-        
-        // Remplir les inputs
-        const inputs = document.querySelectorAll(".pred-input");
-        inputs.forEach(inp => {
-            const key = `nba2026_${inp.dataset.matchupId}_${inp.dataset.player}`;
-            if (serverPredictions[key]) {
-                inp.value = serverPredictions[key];
-            }
-        });
-        
-        // Matchups
-        document.querySelectorAll(".matchup-name").forEach((el, index) => {
-            let mId = el.nextElementSibling.querySelector('input').dataset.matchupId;
-            let saved = serverPredictions[`nba2026_matchupName_${mId}`];
-            if(saved) el.textContent = saved;
-            
-            el.addEventListener("input", async (e) => {
-                const saveRes = await fetch('/api/prediction', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ player: currentUser, pin: currentPin, key: `nba2026_matchupName_${mId}`, value: e.target.textContent })
-                });
-                const saveData = await saveRes.json();
-                if(!saveData.success) {
-                    alert(saveData.message);
-                }
-            });
-        });
-
-        applyLockingLogic();
-        calculatePoints();
-    } catch(err) {
-        console.error("Load error", err);
-    }
-}
+// ============== PARSE INPUT ==============
 
 function parseInput(text) {
     if (!text || text.includes('🔒')) return { team: null, games: null }; 
@@ -264,6 +335,8 @@ function parseInput(text) {
     }
     return { team: text, games: null };
 }
+
+// ============== NBA RESULTS ==============
 
 async function fetchNBAResults() {
     try {
@@ -289,10 +362,13 @@ async function fetchNBAResults() {
     calculatePoints();
 }
 
+// ============== CALCULATE POINTS ==============
+
 function calculatePoints() {
     let playerScores = { 'WILL': 0, 'OLI': 0, 'MIK': 0, 'THOM': 0, 'SAM': 0, 'DOUSKI': 0 };
     const inputs = document.querySelectorAll(".pred-input");
     inputs.forEach(inp => {
+        if (!inp.dataset.matchupId) return;
         const matchupId = inp.dataset.matchupId;
         const player = inp.dataset.player;
         const pred = parseInput(inp.value);
@@ -311,12 +387,14 @@ function calculatePoints() {
             }
         }
         
-        badge.className = "score-badge";
-        if (inp.value.trim() !== "" && !inp.value.includes('🔒')) {
-            badge.classList.add("active", `points-${pts}`);
-            badge.textContent = pts;
-        } else {
-            badge.classList.remove("active");
+        if (badge) {
+            badge.className = "score-badge";
+            if (inp.value.trim() !== "" && !inp.value.includes('🔒')) {
+                badge.classList.add("active", `points-${pts}`);
+                badge.textContent = pts;
+            } else {
+                badge.classList.remove("active");
+            }
         }
         playerScores[player] += pts;
     });
