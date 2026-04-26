@@ -113,6 +113,7 @@ const bracketData = [
 
 const teamAliases = { "cavs": "cavaliers", "sixers": "76ers", "wolves": "timberwolves", "blazers": "trail blazers" };
 let realResults = {};
+let liveSeriesScores = {};
 let realMvps = {};
 let serverPredictions = {};
 let roundLocks = { rd1: false, rd2: true, ff: true, fin: true };
@@ -491,6 +492,13 @@ function buildGrid() {
             nameSpan.textContent = getSeriesLabel(seriesId);
             matchCell.appendChild(nameSpan);
             
+            if (!isMvpSeries(seriesId)) {
+                const scoreSpan = document.createElement("div");
+                scoreSpan.className = "series-live-score";
+                scoreSpan.id = `series-score-${seriesId}`;
+                matchCell.appendChild(scoreSpan);
+            }
+            
             // Admin: winner selector + play-in team setter
             if (isAdmin && !isMvpSeries(seriesId)) {
                 const [t1, t2] = getSeriesTeams(seriesId);
@@ -671,6 +679,12 @@ function buildGrid() {
                 badge.className = "score-badge";
                 badge.id = `badge-${seriesId}-${p}`;
                 cell.appendChild(badge);
+                
+                const remBadge = document.createElement("div");
+                remBadge.className = "remaining-badge";
+                remBadge.id = `remaining-${seriesId}-${p}`;
+                cell.appendChild(remBadge);
+                
                 row.appendChild(cell);
             });
             section.appendChild(row);
@@ -920,20 +934,28 @@ async function fetchNBAResults() {
         const response = await fetch(url);
         const rawData = await response.json();
         const data = JSON.parse(rawData.contents);
-        if (data.resultSets && data.resultSets[0].rowSet) {
-            const rows = data.resultSets[0].rowSet;
-            const headers = data.resultSets[0].headers;
-            rows.forEach(r => {
-                let highWins = r[headers.indexOf("HIGH_SEED_SERIES_WINS")];
-                let lowWins = r[headers.indexOf("LOW_SEED_SERIES_WINS")];
-                let highTeam = r[headers.indexOf("HIGH_SEED_TEAM_NICKNAME")]?.toLowerCase() || "";
-                let lowTeam = r[headers.indexOf("LOW_SEED_TEAM_NICKNAME")]?.toLowerCase() || "";
+        if (data.bracket && data.bracket.playoffBracketSeries) {
+            data.bracket.playoffBracketSeries.forEach(apiSeries => {
+                let highTeam = apiSeries.highSeedName;
+                let lowTeam = apiSeries.lowSeedName;
+                if (!highTeam || !lowTeam) return;
+                
+                highTeam = highTeam.toLowerCase();
+                lowTeam = lowTeam.toLowerCase();
+                
+                const highWins = apiSeries.highSeedSeriesWins || 0;
+                const lowWins = apiSeries.lowSeedSeriesWins || 0;
+                
                 if (highWins === 4) realResults[highTeam] = 4 + lowWins;
                 else if (lowWins === 4) realResults[lowTeam] = 4 + highWins;
+                
+                liveSeriesScores[highTeam] = highWins;
+                liveSeriesScores[lowTeam] = lowWins;
             });
         }
     } catch(err) {
         realResults = {};
+        liveSeriesScores = {};
     }
     calculatePoints();
 }
@@ -942,7 +964,11 @@ async function fetchNBAResults() {
 
 function calculatePoints() {
     let playerScores = {};
-    players.forEach(p => playerScores[p] = 0);
+    let playerRemaining = {};
+    players.forEach(p => {
+        playerScores[p] = 0;
+        playerRemaining[p] = 0;
+    });
     
     // Dropdown predictions
     document.querySelectorAll(".pick-team").forEach(sel => {
@@ -952,7 +978,9 @@ function calculatePoints() {
         const gSel = document.querySelector(`.pick-games[data-matchup-id="${matchupId}"][data-player="${player}"]`);
         const games = gSel ? (parseInt(gSel.value) || null) : null;
         const badge = document.getElementById(`badge-${matchupId}-${player}`);
+        const remBadge = document.getElementById(`remaining-${matchupId}-${player}`);
         let pts = 0;
+        let remPts = 0;
         
         if (team && !sel.classList.contains("secret-pick")) {
             const series = bracket[matchupId];
@@ -971,6 +999,30 @@ function calculatePoints() {
             }
         }
         
+        // Calculate remaining points
+        const [t1, t2] = getSeriesTeams(matchupId);
+        const series = bracket[matchupId];
+        const seriesOver = (series && series.winner) || (t1 && realResults[t1]) || (t2 && realResults[t2]);
+        if (!seriesOver) {
+            // They can still get 2 points for any series that isn't over
+            remPts = 2;
+            
+            if (team && !sel.classList.contains("secret-pick")) {
+                if (!games) {
+                    remPts = 1; // No games picked = can't get the +1 for games
+                } else {
+                    const opponent = (t1 === team) ? t2 : ((t2 === team) ? t1 : null);
+                    if (opponent) {
+                        const opponentWins = liveSeriesScores[opponent] || 0;
+                        // If opponent has already won more games than they are allowed to lose
+                        if (opponentWins > games - 4) {
+                            remPts = 1;
+                        }
+                    }
+                }
+            }
+        }
+        
         if (badge) {
             badge.className = "score-badge";
             if (team && !sel.classList.contains("secret-pick")) {
@@ -978,7 +1030,11 @@ function calculatePoints() {
                 badge.textContent = pts;
             }
         }
+        if (remBadge) {
+            remBadge.textContent = remPts > 0 ? `+${remPts}` : "";
+        }
         if (playerScores[player] !== undefined) playerScores[player] += pts;
+        if (playerRemaining[player] !== undefined) playerRemaining[player] += remPts;
     });
     
     // MVP inputs
@@ -986,12 +1042,20 @@ function calculatePoints() {
         const matchupId = inp.dataset.matchupId;
         const player = inp.dataset.player;
         const badge = document.getElementById(`badge-${matchupId}-${player}`);
+        const remBadge = document.getElementById(`remaining-${matchupId}-${player}`);
         const text = inp.value.toLowerCase().trim();
         let pts = 0;
+        let remPts = 0;
         
         if (text && !text.includes('🔒')) {
             const realMvp = realMvps[matchupId];
             if (realMvp && text.includes(realMvp)) pts = 1;
+        }
+        
+        const realMvp = realMvps[matchupId];
+        if (!realMvp) {
+            // MVP not decided yet, they can still get 1 point
+            remPts = 1;
         }
         
         if (badge) {
@@ -1001,11 +1065,35 @@ function calculatePoints() {
                 badge.textContent = pts;
             }
         }
+        if (remBadge) {
+            remBadge.textContent = remPts > 0 ? `+${remPts}` : "";
+        }
         if (playerScores[player] !== undefined) playerScores[player] += pts;
+        if (playerRemaining[player] !== undefined) playerRemaining[player] += remPts;
+    });
+    
+    // Update live series scores
+    Object.keys(bracket).forEach(matchupId => {
+        const scoreSpan = document.getElementById(`series-score-${matchupId}`);
+        if (scoreSpan) {
+            const [t1, t2] = getSeriesTeams(matchupId);
+            if (t1 && t2) {
+                const w1 = liveSeriesScores[t1];
+                const w2 = liveSeriesScores[t2];
+                if (w1 !== undefined || w2 !== undefined) {
+                    scoreSpan.textContent = `${w1 || 0} - ${w2 || 0}`;
+                    scoreSpan.classList.add("visible");
+                } else {
+                    scoreSpan.classList.remove("visible");
+                }
+            }
+        }
     });
     
     players.forEach(p => {
         const el = document.getElementById(`score-${p}`);
         if (el) el.textContent = playerScores[p];
+        const rel = document.getElementById(`remaining-${p}`);
+        if (rel) rel.textContent = playerRemaining[p];
     });
 }
